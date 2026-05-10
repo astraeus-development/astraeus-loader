@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astraeus Loader</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+<style>
+  :root {
+    --bg: #09090e;
+    --surface: #111118;
+    --surface2: #1a1a28;
+    --border: #22223a;
+    --border2: #32324e;
+    --text: #eeeef8;
+    --text2: #8888b0;
+    --text3: #505070;
+    --accent: #7c6aff;
+    --accent2: #f97316;
+    --accent3: #ff6a8a;
+    --accent4: #6affb8;
+    --error: #ff4d6a;
+    --warn: #f5a623;
+    --success: #6affb8;
+    --grid-line: rgba(124,106,255,0.05);
+    --font-ui: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+    --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --header-h: 60px;
+    --tab-bar-h: 44px;
+    --console-h: 0px;
+  }
+
+  [data-theme="light"] {
+    --bg: #fafaf8;
+    --surface: #ffffff;
+    --surface2: #f0ece4;
+    --border: #e2dbd0;
+    --border2: #d0c8bc;
+    --text: #1a1208;
+    --text2: #6b5e4a;
+    --text3: #a89880;
+    --accent: #c94b08;
+    --accent2: #ea580c;
+    --accent3: #a83d00;
+    --accent4: #7a2800;
+    --grid-line: rgba(201,75,8,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+    animation: gridFloat 20s linear infinite;
+  }
+
+  @keyframes gridFloat {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(40px); }
+  }
+
+  /* ── HEADER ── */
+  header {
+    height: var(--header-h);
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+    background: rgba(17,17,24,0.7);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  [data-theme="light"] header {
+    background: rgba(255,255,255,0.7);
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .icon-btn svg {
+    width: 16px; height: 16px;
+    fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(124,106,255,0.2);
+  }
+
+  .icon-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(124,106,255,0.1);
+  }
+
+  .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .primary-btn:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(124,106,255,0.35);
+  }
+
+  .primary-btn svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
+
+  .divider { width: 1px; height: 24px; background: var(--border); }
+
+  #fileUpload { display: none; }
+
+  /* ── MAIN LAYOUT ── */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── EDITOR PANEL ── */
+  .editor-panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  /* ── FILE TABS ── */
+  .file-tabs {
+    height: var(--tab-bar-h);
+    display: flex;
+    align-items: stretch;
+    background: rgba(17,17,24,0.5);
+    border-bottom: 1px solid var(--border);
+    padding: 0 12px;
+    gap: 2px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .file-tabs::-webkit-scrollbar { display: none; }
+
+  [data-theme="light"] .file-tabs {
+    background: rgba(255,255,255,0.5);
+  }
+
+  .file-tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    margin-top: 6px;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    position: relative;
+    background: transparent;
+    user-select: none;
+  }
+
+  .file-tab:hover {
+    color: var(--text2);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .file-tab.active {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+  }
+
+  [data-theme="light"] .file-tab.active {
+    background: var(--bg);
+  }
+
+  .file-tab .tab-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tab-dot.html { background: #f97316; }
+  .tab-dot.css  { background: #7c6aff; }
+  .tab-dot.js   { background: #f5c542; }
+  .tab-dot.jsx  { background: #6affb8; }
+
+  .tab-close {
+    display: none;
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    align-items: center; justify-content: center;
+    color: var(--text3);
+    margin-left: 2px;
+    flex-shrink: 0;
+  }
+
+  .file-tab:hover .tab-close,
+  .file-tab.active .tab-close {
+    display: flex;
+  }
+
+  .tab-close:hover { background: var(--border2); color: var(--text); }
+  .tab-close svg { width: 10px; height: 10px; stroke-width: 2.5; }
+
+  .tab-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    color: var(--text3);
+    cursor: pointer;
+    margin: auto 0 auto 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .tab-add:hover { color: var(--accent); background: rgba(124,106,255,0.1); }
+  .tab-add svg { width: 14px; height: 14px; stroke-width: 2; fill: none; stroke: currentColor; }
+
+  /* ── EDITOR CONTENT ── */
+  .editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cm-wrapper {
+    flex: 1;
+    overflow: hidden;
+    display: none;
+  }
+
+  .cm-wrapper.visible { display: flex; flex-direction: column; }
+
+  .CodeMirror {
+    flex: 1;
+    height: 100%;
+    font-family: var(--font-mono) !important;
+    font-size: 13.5px !important;
+    line-height: 1.65 !important;
+    background: transparent !important;
+    color: var(--text) !important;
+  }
+
+  .CodeMirror-scroll { height: 100%; }
+
+  /* Dark theme CodeMirror tweaks */
+  [data-theme="dark"] .CodeMirror-gutters {
+    background: rgba(17,17,24,0.6) !important;
+    border-right: 1px solid var(--border) !important;
+  }
+
+  [data-theme="dark"] .CodeMirror-linenumber { color: var(--text3) !important; }
+
+  [data-theme="dark"] .CodeMirror-activeline-background {
+    background: rgba(124,106,255,0.06) !important;
+  }
+
+  [data-theme="dark"] .CodeMirror-cursor {
+    border-left: 2px solid var(--accent) !important;
+  }
+
+  [data-theme="light"] .CodeMirror {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+  }
+
+  /* ── EDITOR STATUS BAR ── */
+  .editor-statusbar {
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    background: rgba(17,17,24,0.4);
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  [data-theme="light"] .editor-statusbar {
+    background: rgba(255,255,255,0.4);
+  }
+
+  .statusbar-left, .statusbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+  }
+
+  .status-dot.error { background: var(--error); }
+  .status-dot.pending { background: var(--warn); }
+
+  /* ── PREVIEW PANEL ── */
+  .preview-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .preview-bar {
+    height: var(--tab-bar-h);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    background: rgba(17,17,24,0.5);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  [data-theme="light"] .preview-bar {
+    background: rgba(255,255,255,0.5);
+  }
+
+  .preview-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex: 1;
+  }
+
+  .device-btns {
+    display: flex;
+    gap: 4px;
+  }
+
+  .device-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    transition: all 0.15s;
+  }
+
+  .device-btn:hover, .device-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .preview-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+  }
+
+  #previewFrame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    transition: width 0.3s ease;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* device viewport sizes */
+  #previewFrame.mobile { width: 390px; background: transparent; }
+  #previewFrame.tablet { width: 768px; background: transparent; }
+
+  .preview-wrap.device-frame {
+    background: var(--bg);
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+  }
+
+  .preview-wrap.device-frame #previewFrame {
+    border-radius: 12px;
+    box-shadow: 0 0 0 8px var(--border2), 0 20px 60px rgba(0,0,0,0.5);
+    height: calc(100% - 32px);
+  }
+
+  /* ── ERROR OVERLAY ── */
+  .error-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255,77,106,0.05);
+    border: 1px solid rgba(255,77,106,0.3);
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--error);
+    text-align: center;
+  }
+
+  .error-overlay.visible { display: flex; }
+
+  .error-overlay svg { width: 32px; height: 32px; stroke: var(--error); fill: none; stroke-width: 1.5; }
+
+  .error-msg {
+    background: rgba(255,77,106,0.1);
+    border: 1px solid rgba(255,77,106,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--error);
+    font-size: 12px;
+    max-width: 100%;
+    overflow: auto;
+    text-align: left;
+    white-space: pre-wrap;
+    max-height: 150px;
+  }
+
+  /* ── CONSOLE ── */
+  .console-panel {
+    border-top: 1px solid var(--border);
+    background: rgba(9,9,14,0.8);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    height: 0;
+    transition: height 0.25s ease;
+  }
+
+  [data-theme="light"] .console-panel {
+    background: rgba(240,236,228,0.9);
+  }
+
+  .console-panel.open {
+    height: 180px;
+  }
+
+  .console-bar {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    flex-shrink: 0;
+  }
+
+  .console-bar span { flex: 1; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .console-clear {
+    background: none; border: none;
+    color: var(--text3); font-family: var(--font-mono); font-size: 11px;
+    cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    transition: color 0.15s;
+  }
+
+  .console-clear:hover { color: var(--text2); }
+
+  .console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .console-line {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .console-line.log { color: var(--text2); }
+  .console-line.error { color: var(--error); background: rgba(255,77,106,0.06); }
+  .console-line.warn { color: var(--warn); background: rgba(245,166,35,0.06); }
+  .console-line.info { color: #60a5fa; }
+
+  .console-prefix {
+    font-size: 10px;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  /* ── SETTINGS MODAL ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    z-index: 99;
+  }
+
+  .modal-backdrop.active { display: block; }
+
+  .settings-modal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -52%) scale(0.97);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    z-index: 100;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    min-width: 320px;
+    transition: transform 0.2s, opacity 0.2s;
+    opacity: 0;
+  }
+
+  .settings-modal.active {
+    display: block;
+    animation: modalIn 0.25s ease forwards;
+  }
+
+  @keyframes modalIn {
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  }
+
+  .settings-header {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .settings-section {
+    margin-bottom: 16px;
+  }
+
+  .settings-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .settings-row label {
+    font-size: 14px;
+    color: var(--text2);
+    flex: 1;
+  }
+
+  .toggle {
+    position: relative;
+    width: 38px; height: 22px;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border2);
+    border-radius: 99px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track {
+    background: var(--accent);
+  }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+
+  .color-swatch {
+    -webkit-appearance: none;
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+  }
+
+  .color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-swatch::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+  .kbd-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text3); padding: 2px 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+
+  /* ── AUTO-REFRESH CHIP ── */
+  .refresh-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+
+  .refresh-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  .refresh-chip.on {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(106,255,184,0.06);
+  }
+
+  .refresh-chip .chip-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+    transition: background 0.15s;
+  }
+
+  .refresh-chip.on .chip-dot { background: var(--success); }
+
+  /* ── NEW FILE MODAL ── */
+  .new-file-modal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    z-index: 101;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    min-width: 280px;
+  }
+
+  .new-file-modal.active { display: block; }
+
+  .new-file-modal h3 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .file-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .file-type-opt {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; padding: 12px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+
+  .file-type-opt:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .file-type-opt .ftype-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .new-file-name {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+
+  .new-file-name:focus { border-color: var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .cancel-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text2);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .cancel-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  /* ── SCROLLBARS ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* ── TOOLTIP ── */
+  [title] { position: relative; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <svg viewBox="0 0 24 24" width="26" height="26" stroke="var(--accent)" stroke-width="2" fill="none">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+      <polyline points="2 17 12 22 22 17"></polyline>
+      <polyline points="2 12 12 17 22 12"></polyline>
+    </svg>
+    <span class="logo-text">Astraeus Loader</span>
+  </div>
+
+  <div class="toolbar">
+    <div id="refreshChip" class="refresh-chip" title="Toggle auto-refresh">
+      <span class="chip-dot"></span>
+      <span id="refreshLabel">Auto</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <input type="file" id="fileUpload" accept=".html,.js,.jsx,.css,.tsx,.ts,.txt" multiple>
+    <button class="icon-btn" id="uploadBtn" title="Upload file(s)">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </button>
+
+    <button class="icon-btn" id="consoleBtn" title="Toggle console">
+      <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    </button>
+
+    <button class="icon-btn" id="themeToggle" title="Toggle theme">
+      <svg viewBox="0 0 24 24" id="themeIcon">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+
+    <button class="icon-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9"/></svg>
+    </button>
+
+    <div class="divider"></div>
+
+    <button class="primary-btn" id="runBtn">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Run
+    </button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- LEFT: EDITOR -->
+  <div class="editor-panel">
+    <div class="file-tabs" id="fileTabs">
+      <!-- tabs injected here -->
+      <div class="tab-add" id="addTabBtn" title="New file">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </div>
+
+    <div class="editor-content" id="editorContent">
+      <!-- CodeMirror instances injected here -->
+    </div>
+
+    <div class="editor-statusbar">
+      <div class="statusbar-left">
+        <span class="status-badge">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Ready</span>
+        </span>
+      </div>
+      <div class="statusbar-right">
+        <span id="cursorPos">Ln 1, Col 1</span>
+        <span id="activeMode">JSX</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: PREVIEW -->
+  <div class="preview-panel">
+    <div class="preview-bar">
+      <span class="preview-label">Preview</span>
+
+      <div class="device-btns">
+        <button class="device-btn active" id="devFull" title="Full width">Full</button>
+        <button class="device-btn" id="devTablet" title="Tablet (768px)">Tablet</button>
+        <button class="device-btn" id="devMobile" title="Mobile (390px)">Mobile</button>
+      </div>
+
+      <button class="icon-btn" id="refreshBtn" title="Refresh preview" style="width:30px;height:30px;margin-left:4px;">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.69"/></svg>
+      </button>
+
+      <button class="icon-btn" id="openNewTab" title="Open in new tab" style="width:30px;height:30px;">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+    </div>
+
+    <div class="preview-wrap" id="previewWrap">
+      <div class="error-overlay" id="errorOverlay">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <strong>Runtime Error</strong>
+        <div class="error-msg" id="errorMsg"></div>
+      </div>
+      <iframe id="previewFrame" sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"></iframe>
+    </div>
+
+    <!-- Console -->
+    <div class="console-panel" id="consolePanel">
+      <div class="console-bar">
+        <span>Console</span>
+        <button class="console-clear" id="consoleClear">Clear</button>
+      </div>
+      <div class="console-output" id="consoleOutput">
+        <div class="console-line info"><span class="console-prefix">ℹ</span><span>Console ready. Run your code to see output.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="modalBackdrop"></div>
+<div class="settings-modal" id="settingsModal">
+  <div class="settings-header">
+    Settings
+    <button class="icon-btn" id="closeSettings" style="width:28px;height:28px;border:none;">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-label">Accent Color</div>
+    <div class="settings-row">
+      <label>Theme color</label>
+      <input type="color" class="color-swatch" id="accentColorPicker" value="#7c6aff">
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-label">Editor</div>
+    <div class="settings-row">
+      <label>Line numbers</label>
+      <label class="toggle">
+        <input type="checkbox" id="togLineNumbers" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <label>Word wrap</label>
+      <label class="toggle">
+        <input type="checkbox" id="togWordWrap">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <label>Auto-close brackets</label>
+      <label class="toggle">
+        <input type="checkbox" id="togAutoClose" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-label">Shortcuts</div>
+    <div class="settings-row">
+      <label>Run</label>
+      <span class="kbd-badge">Ctrl + Enter</span>
+    </div>
+    <div class="settings-row">
+      <label>New file</label>
+      <span class="kbd-badge">Ctrl + N</span>
+    </div>
+    <div class="settings-row">
+      <label>Toggle console</label>
+      <span class="kbd-badge">Ctrl + `</span>
+    </div>
+  </div>
+</div>
+
+<!-- NEW FILE MODAL -->
+<div class="new-file-modal" id="newFileModal">
+  <h3>New File</h3>
+  <div class="file-type-grid">
+    <div class="file-type-opt" data-type="html">
+      <span class="ftype-dot" style="background:#f97316"></span>HTML
+    </div>
+    <div class="file-type-opt" data-type="css">
+      <span class="ftype-dot" style="background:#7c6aff"></span>CSS
+    </div>
+    <div class="file-type-opt" data-type="js">
+      <span class="ftype-dot" style="background:#f5c542"></span>JS
+    </div>
+    <div class="file-type-opt" data-type="jsx">
+      <span class="ftype-dot" style="background:#6affb8"></span>JSX
+    </div>
+    <div class="file-type-opt" data-type="ts">
+      <span class="ftype-dot" style="background:#60a5fa"></span>TS
+    </div>
+    <div class="file-type-opt" data-type="tsx">
+      <span class="ftype-dot" style="background:#a78bfa"></span>TSX
+    </div>
+  </div>
+  <input class="new-file-name" id="newFileName" type="text" placeholder="filename.jsx" spellcheck="false">
+  <div class="modal-actions">
+    <button class="cancel-btn" id="cancelNewFile">Cancel</button>
+    <button class="primary-btn" id="confirmNewFile" style="font-size:13px;padding:7px 14px;">Create</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+const FILES = {}; // id → { name, type, cm, content }
+let activeFileId = null;
+let autoRefresh = false;
+let consoleOpen = false;
+let refreshTimer = null;
+let newFileSelectedType = 'jsx';
+
+const editors = {}; // id → CodeMirror instance
+
+// ═══════════════════════════════════════════════════════════
+//  ELEMENTS
+// ═══════════════════════════════════════════════════════════
+const fileTabs      = document.getElementById('fileTabs');
+const editorContent = document.getElementById('editorContent');
+const previewFrame  = document.getElementById('previewFrame');
+const previewWrap   = document.getElementById('previewWrap');
+const errorOverlay  = document.getElementById('errorOverlay');
+const errorMsg      = document.getElementById('errorMsg');
+const consolePanel  = document.getElementById('consolePanel');
+const consoleOutput = document.getElementById('consoleOutput');
+const statusDot     = document.getElementById('statusDot');
+const statusText    = document.getElementById('statusText');
+const cursorPos     = document.getElementById('cursorPos');
+const activeMode    = document.getElementById('activeMode');
+const refreshChip   = document.getElementById('refreshChip');
+const refreshLabel  = document.getElementById('refreshLabel');
+const addTabBtn     = document.getElementById('addTabBtn');
+const newFileModal  = document.getElementById('newFileModal');
+const newFileName   = document.getElementById('newFileName');
+const htmlEl        = document.documentElement;
+const modalBackdrop = document.getElementById('modalBackdrop');
+
+// ═══════════════════════════════════════════════════════════
+//  FILE MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function genId() { return 'f' + Date.now() + Math.random().toString(36).slice(2, 6); }
+
+function dotColor(type) {
+  return { html:'#f97316', css:'#7c6aff', js:'#f5c542', jsx:'#6affb8', ts:'#60a5fa', tsx:'#a78bfa' }[type] || '#8888b0';
+}
+
+function cmMode(type) {
+  if (type === 'html') return 'htmlmixed';
+  if (type === 'css')  return 'css';
+  if (type === 'jsx' || type === 'tsx' || type === 'js' || type === 'ts') return 'jsx';
+  return 'javascript';
+}
+
+function createFile(name, type, content = '') {
+  const id = genId();
+
+  // Build tab
+  const tab = document.createElement('div');
+  tab.className = 'file-tab';
+  tab.dataset.id = id;
+  tab.innerHTML = `
+    <span class="tab-dot ${type}"></span>
+    <span class="tab-name">${name}</span>
+    <span class="tab-close" data-id="${id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </span>
+  `;
+  tab.style.setProperty('--tab-dot-color', dotColor(type));
+  fileTabs.insertBefore(tab, addTabBtn);
+
+  // Build editor wrapper
+  const wrap = document.createElement('div');
+  wrap.className = 'cm-wrapper';
+  wrap.dataset.id = id;
+  editorContent.appendChild(wrap);
+
+  // CodeMirror
+  const cm = CodeMirror(wrap, {
+    value: content,
+    mode: cmMode(type),
+    theme: htmlEl.getAttribute('data-theme') === 'dark' ? 'dracula' : 'eclipse',
+    lineNumbers: document.getElementById('togLineNumbers')?.checked ?? true,
+    autoCloseBrackets: document.getElementById('togAutoClose')?.checked ?? true,
+    matchBrackets: true,
+    styleActiveLine: true,
+    indentUnit: 2,
+    tabSize: 2,
+    indentWithTabs: false,
+    extraKeys: {
+      Tab: (cm) => {
+        if (cm.somethingSelected()) { cm.indentSelection('add'); }
+        else { cm.replaceSelection('  '); }
+      }
+    }
+  });
+
+  cm.on('change', () => {
+    FILES[id].content = cm.getValue();
+    if (autoRefresh) scheduleRefresh();
+  });
+
+  cm.on('cursorActivity', () => {
+    const c = cm.getCursor();
+    cursorPos.textContent = `Ln ${c.line + 1}, Col ${c.ch + 1}`;
+  });
+
+  FILES[id] = { name, type, cm, content };
+  editors[id] = cm;
+
+  // Event: tab click
+  tab.addEventListener('click', (e) => {
+    if (e.target.closest('.tab-close')) return;
+    switchToFile(id);
+  });
+
+  // Event: close
+  tab.querySelector('.tab-close').addEventListener('click', () => closeFile(id));
+
+  switchToFile(id);
+  return id;
+}
+
+function switchToFile(id) {
+  activeFileId = id;
+
+  // Update tabs
+  document.querySelectorAll('.file-tab').forEach(t => t.classList.toggle('active', t.dataset.id === id));
+
+  // Update editors
+  document.querySelectorAll('.cm-wrapper').forEach(w => w.classList.toggle('visible', w.dataset.id === id));
+
+  // Refresh CodeMirror layout
+  if (editors[id]) {
+    editors[id].refresh();
+    const c = editors[id].getCursor();
+    cursorPos.textContent = `Ln ${c.line + 1}, Col ${c.ch + 1}`;
+  }
+
+  // Update status bar
+  if (FILES[id]) {
+    activeMode.textContent = FILES[id].type.toUpperCase();
+  }
+}
+
+function closeFile(id) {
+  if (Object.keys(FILES).length <= 1) return; // keep at least one
+
+  const ids = Object.keys(FILES);
+  const idx = ids.indexOf(id);
+  const nextId = ids[idx + 1] || ids[idx - 1];
+
+  delete FILES[id];
+  delete editors[id];
+
+  document.querySelector(`.file-tab[data-id="${id}"]`)?.remove();
+  document.querySelector(`.cm-wrapper[data-id="${id}"]`)?.remove();
+
+  if (nextId) switchToFile(nextId);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDERING ENGINE
+// ═══════════════════════════════════════════════════════════
+function buildSrcdoc() {
+  const fileList = Object.values(FILES);
+
+  // Multi-file: combine html + css + js
+  const htmlFile = fileList.find(f => f.type === 'html');
+  const cssFiles = fileList.filter(f => f.type === 'css');
+  const jsFiles  = fileList.filter(f => f.type === 'js' || f.type === 'ts');
+  const jsxFiles = fileList.filter(f => f.type === 'jsx' || f.type === 'tsx');
+  const hasBabel = jsxFiles.length > 0;
+
+  // Determine primary mode
+  if (htmlFile) {
+    // HTML-first mode: inject CSS and JS into the HTML
+    let src = htmlFile.content;
+
+    const styleBlock = cssFiles.map(f => `<style>\n${f.content}\n</style>`).join('\n');
+    const scriptBlock = jsFiles.map(f => `<script>\ntry{\n${f.content}\n}catch(e){console.error(e)}\n<\/script>`).join('\n');
+
+    // Inject before </head> or at top
+    if (src.includes('</head>')) {
+      src = src.replace('</head>', `${styleBlock}\n</head>`);
+    } else {
+      src = styleBlock + '\n' + src;
+    }
+
+    if (src.includes('</body>')) {
+      src = src.replace('</body>', `${scriptBlock}\n</body>`);
+    } else {
+      src += '\n' + scriptBlock;
+    }
+
+    return { srcdoc: injectConsoleProxy(src), blob: null };
+  }
+
+  if (hasBabel) {
+    // JSX/TSX mode
+    const allJsxCode = jsxFiles.map(f => {
+      return f.content
+        .replace(/import\s+.*?from\s+['"].*?['"];?\n?/g, '')
+        .replace(/export\s+default\s+/g, '');
+    }).join('\n\n');
+
+    const extraCss = cssFiles.map(f => f.content).join('\n');
+
+    const src = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  ${extraCss ? `<style>${extraCss}</style>` : ''}
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    try {
+      ${allJsxCode}
+      
+      const entry = typeof App !== 'undefined' ? App
+        : typeof default !== 'undefined' ? default
+        : null;
+
+      if (entry) {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(entry));
+      } else {
+        // try to find any component-shaped function
+        document.getElementById('root').innerHTML =
+          '<div style="padding:16px;font-family:monospace;color:#f97316;">No <b>App</b> component found to mount. Make sure you have a function named <b>App</b>.</div>';
+      }
+    } catch(e) {
+      document.getElementById('root').innerHTML =
+        '<pre style="padding:16px;color:#ff4d6a;font-family:monospace;white-space:pre-wrap;">' + e.message + '</pre>';
+      console.error(e);
+    }
+  <\/script>
+</body>
+</html>`;
+    return { srcdoc: injectConsoleProxy(src), blob: null };
+  }
+
+  // Pure JS mode
+  const allJs = jsFiles.map(f => f.content).join('\n\n');
+  const extraCss = cssFiles.map(f => f.content).join('\n');
+
+  const src = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  ${extraCss ? `<style>body{font-family:sans-serif;padding:1rem;}${extraCss}</style>` : '<style>body{font-family:sans-serif;padding:1rem;}</style>'}
+</head>
+<body>
+  <div id="output">Script output will appear here or in the console.</div>
+  <script>
+    try {
+      ${allJs}
+    } catch(e) {
+      document.body.innerHTML = '<pre style="color:#ff4d6a;font-family:monospace;padding:1rem;">' + (e.stack||e.message) + '</pre>';
+      console.error(e);
+    }
+  <\/script>
+</body>
+</html>`;
+  return { srcdoc: injectConsoleProxy(src), blob: null };
+}
+
+function injectConsoleProxy(src) {
+  const proxy = `
+<script>
+(function() {
+  const orig = { log: console.log, error: console.error, warn: console.warn, info: console.info };
+  function relay(level, args) {
+    try {
+      window.parent.postMessage({
+        type: 'console',
+        level,
+        args: Array.from(args).map(a => {
+          try { return typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a); }
+          catch(e) { return '[Unserializable]'; }
+        })
+      }, '*');
+    } catch(e) {}
+    orig[level].apply(console, args);
+  }
+  console.log   = (...a) => relay('log',   a);
+  console.error = (...a) => relay('error', a);
+  console.warn  = (...a) => relay('warn',  a);
+  console.info  = (...a) => relay('info',  a);
+  window.onerror = (msg, src, line, col) => {
+    relay('error', [msg + ' (line ' + line + ')']);
+    return false;
+  };
+})();
+<\/script>`;
+
+  if (src.includes('<head>')) {
+    return src.replace('<head>', '<head>' + proxy);
+  }
+  return proxy + src;
+}
+
+function updatePreview() {
+  hideError();
+  const { srcdoc } = buildSrcdoc();
+  previewFrame.srcdoc = srcdoc;
+  setStatus('ok', 'Rendered');
+  setTimeout(() => setStatus('ok', 'Ready'), 1500);
+}
+
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(updatePreview, 600);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STATUS & ERROR
+// ═══════════════════════════════════════════════════════════
+function setStatus(type, text) {
+  statusDot.className = 'status-dot' + (type === 'error' ? ' error' : type === 'pending' ? ' pending' : '');
+  statusText.textContent = text;
+}
+
+function showError(msg) {
+  errorOverlay.classList.add('visible');
+  errorMsg.textContent = msg;
+  setStatus('error', 'Error');
+}
+
+function hideError() {
+  errorOverlay.classList.remove('visible');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONSOLE
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'console') {
+    const { level, args } = e.data;
+    appendConsole(level, args.join(' '));
+  }
+  if (e.data?.type === 'error') {
+    showError(e.data.msg);
+    appendConsole('error', e.data.msg);
+  }
+});
+
+function appendConsole(level, text) {
+  const line = document.createElement('div');
+  line.className = `console-line ${level}`;
+  const prefix = { log: '›', error: '✕', warn: '⚠', info: 'ℹ' }[level] || '›';
+  line.innerHTML = `<span class="console-prefix">${prefix}</span><span>${escHtml(text)}</span>`;
+  consoleOutput.appendChild(line);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+  // auto-open console on errors
+  if (level === 'error' && !consoleOpen) toggleConsole();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleConsole() {
+  consoleOpen = !consoleOpen;
+  consolePanel.classList.toggle('open', consoleOpen);
+  document.getElementById('consoleBtn').classList.toggle('active', consoleOpen);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILE UPLOAD
+// ═══════════════════════════════════════════════════════════
+document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileUpload').click());
+
+document.getElementById('fileUpload').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const validTypes = ['html','css','js','jsx','ts','tsx','txt'];
+    const type = validTypes.includes(ext) ? ext : 'js';
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      createFile(file.name, type, ev.target.result);
+      updatePreview();
+    };
+    reader.readAsText(file);
+  });
+  e.target.value = '';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════
+function updateCmThemes() {
+  const theme = htmlEl.getAttribute('data-theme') === 'dark' ? 'dracula' : 'eclipse';
+  Object.values(editors).forEach(cm => cm.setOption('theme', theme));
+}
+
+function updateThemeIcon(theme) {
+  const icon = document.getElementById('themeIcon');
+  if (theme === 'dark') {
+    icon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  } else {
+    icon.innerHTML = `
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+  }
+}
+
+const savedTheme = localStorage.getItem('astraeus-theme');
+if (savedTheme) { htmlEl.setAttribute('data-theme', savedTheme); updateThemeIcon(savedTheme); }
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const cur = htmlEl.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  htmlEl.setAttribute('data-theme', next);
+  localStorage.setItem('astraeus-theme', next);
+  updateThemeIcon(next);
+  updateCmThemes();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+const settingsModal = document.getElementById('settingsModal');
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  settingsModal.classList.add('active');
+  modalBackdrop.classList.add('active');
+});
+
+document.getElementById('closeSettings').addEventListener('click', closeSettingsModal);
+modalBackdrop.addEventListener('click', closeSettingsModal);
+
+function closeSettingsModal() {
+  settingsModal.classList.remove('active');
+  modalBackdrop.classList.remove('active');
+}
+
+const colorPicker = document.getElementById('accentColorPicker');
+const savedColor = localStorage.getItem('astraeus-color');
+if (savedColor) {
+  document.documentElement.style.setProperty('--accent', savedColor);
+  colorPicker.value = savedColor;
+}
+
+colorPicker.addEventListener('input', (e) => {
+  document.documentElement.style.setProperty('--accent', e.target.value);
+  localStorage.setItem('astraeus-color', e.target.value);
+});
+
+document.getElementById('togLineNumbers').addEventListener('change', (e) => {
+  Object.values(editors).forEach(cm => cm.setOption('lineNumbers', e.target.checked));
+});
+
+document.getElementById('togWordWrap').addEventListener('change', (e) => {
+  Object.values(editors).forEach(cm => cm.setOption('lineWrapping', e.target.checked));
+});
+
+document.getElementById('togAutoClose').addEventListener('change', (e) => {
+  Object.values(editors).forEach(cm => cm.setOption('autoCloseBrackets', e.target.checked));
+});
+
+// ═══════════════════════════════════════════════════════════
+//  AUTO REFRESH
+// ═══════════════════════════════════════════════════════════
+refreshChip.addEventListener('click', () => {
+  autoRefresh = !autoRefresh;
+  refreshChip.classList.toggle('on', autoRefresh);
+  refreshLabel.textContent = autoRefresh ? 'Auto: On' : 'Auto';
+  if (autoRefresh) updatePreview();
+});
+
+// ═══════════════════════════════════════════════════════════
+//  DEVICE PREVIEW
+// ═══════════════════════════════════════════════════════════
+document.getElementById('devFull').addEventListener('click', () => setDevice('full'));
+document.getElementById('devTablet').addEventListener('click', () => setDevice('tablet'));
+document.getElementById('devMobile').addEventListener('click', () => setDevice('mobile'));
+
+function setDevice(mode) {
+  document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`dev${mode.charAt(0).toUpperCase() + mode.slice(1)}`);
+  if (btn) btn.classList.add('active');
+
+  previewFrame.className = mode === 'full' ? '' : mode;
+  previewWrap.classList.toggle('device-frame', mode !== 'full');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  OPEN IN NEW TAB
+// ═══════════════════════════════════════════════════════════
+document.getElementById('openNewTab').addEventListener('click', () => {
+  const { srcdoc } = buildSrcdoc();
+  const blob = new Blob([srcdoc], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  NEW FILE MODAL
+// ═══════════════════════════════════════════════════════════
+addTabBtn.addEventListener('click', () => {
+  newFileModal.classList.add('active');
+  modalBackdrop.classList.add('active');
+  newFileName.value = '';
+  newFileName.focus();
+});
+
+document.querySelectorAll('.file-type-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.file-type-opt').forEach(o => o.style.borderColor = '');
+    opt.style.borderColor = 'var(--accent)';
+    newFileSelectedType = opt.dataset.type;
+    if (!newFileName.value || newFileName.value === newFileName.dataset.prev) {
+      newFileName.value = `file.${newFileSelectedType}`;
+    }
+    newFileName.dataset.prev = newFileName.value;
+  });
+});
+
+document.getElementById('cancelNewFile').addEventListener('click', closeNewFileModal);
+document.getElementById('confirmNewFile').addEventListener('click', confirmNewFile);
+
+newFileName.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmNewFile(); });
+
+function confirmNewFile() {
+  let name = newFileName.value.trim() || `file.${newFileSelectedType}`;
+  if (!name.includes('.')) name += '.' + newFileSelectedType;
+  const ext = name.split('.').pop().toLowerCase();
+  createFile(name, ext, getDefaultContent(ext));
+  closeNewFileModal();
+}
+
+function closeNewFileModal() {
+  newFileModal.classList.remove('active');
+  modalBackdrop.classList.remove('active');
+  document.querySelectorAll('.file-type-opt').forEach(o => o.style.borderColor = '');
+}
+
+function getDefaultContent(type) {
+  if (type === 'html') return `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8"/>\n  <title>Document</title>\n</head>\n<body>\n  \n</body>\n</html>`;
+  if (type === 'css') return `/* Styles */\n`;
+  if (type === 'js') return `// JavaScript\n`;
+  if (type === 'jsx') return `export default function Component() {\n  return (\n    <div>\n      <h1>Hello!</h1>\n    </div>\n  );\n}\n`;
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); updatePreview(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); addTabBtn.click(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === '`') { e.preventDefault(); toggleConsole(); }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  CONSOLE CONTROLS
+// ═══════════════════════════════════════════════════════════
+document.getElementById('consoleBtn').addEventListener('click', toggleConsole);
+document.getElementById('consoleClear').addEventListener('click', () => {
+  consoleOutput.innerHTML = '';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  RUN / REFRESH
+// ═══════════════════════════════════════════════════════════
+document.getElementById('runBtn').addEventListener('click', updatePreview);
+document.getElementById('refreshBtn').addEventListener('click', updatePreview);
+
+// ═══════════════════════════════════════════════════════════
+//  INITIAL STATE
+// ═══════════════════════════════════════════════════════════
+const defaultJsx = `export default function App() {
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+      <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-violet-400 to-orange-400 bg-clip-text text-transparent">
+        Astraeus Loader
+      </h1>
+      <p className="text-slate-400 mb-8 text-sm">Multi-file editor with live preview</p>
+      <button
+        onClick={() => setCount(c => c + 1)}
+        className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 transition-colors font-semibold"
+      >
+        Clicked {count} time{count !== 1 ? 's' : ''}
+      </button>
+    </div>
+  );
+}`;
+
+createFile('App.jsx', 'jsx', defaultJsx);
+updatePreview();
+</script>
+</body>
+</html>
